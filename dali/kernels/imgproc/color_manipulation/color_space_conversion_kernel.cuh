@@ -130,6 +130,45 @@ struct YCbCr_to_BGR_Converter {
   }
 };
 
+template <typename Out, typename In>
+struct RGB_to_Lab_Converter {
+  static constexpr int out_pixel_sz = 3;
+  static constexpr int in_pixel_sz = 3;
+  static DALI_HOST_DEV DALI_FORCEINLINE vec<out_pixel_sz, Out> convert(vec<in_pixel_sz, In> rgb) {
+    return rgb_to_lab<Out>(rgb);
+  }
+};
+
+template <typename Out, typename In>
+struct BGR_to_Lab_Converter {
+  static constexpr int out_pixel_sz = 3;
+  static constexpr int in_pixel_sz = 3;
+  static DALI_HOST_DEV DALI_FORCEINLINE vec<out_pixel_sz, Out> convert(vec<in_pixel_sz, In> bgr) {
+    return RGB_to_Lab_Converter<Out, In>::convert(
+      RGB_to_BGR_Converter<In, In>::convert(bgr));
+  }
+};
+
+template <typename Out, typename In>
+struct Gray_to_Lab_Converter {
+  static constexpr int out_pixel_sz = 3;
+  static constexpr int in_pixel_sz = 1;
+  static DALI_HOST_DEV DALI_FORCEINLINE vec<out_pixel_sz, Out> convert(vec<in_pixel_sz, In> gray) {
+    return RGB_to_Lab_Converter<Out, In>::convert(
+      Gray_to_RGB_Converter<In, In>::convert(gray));
+  }
+};
+
+template <typename Out, typename In>
+struct YCbCr_to_Lab_Converter {
+  static constexpr int out_pixel_sz = 3;
+  static constexpr int in_pixel_sz = 3;
+  static DALI_HOST_DEV DALI_FORCEINLINE vec<out_pixel_sz, Out> convert(vec<in_pixel_sz, In> ycbcr) {
+    return RGB_to_Lab_Converter<Out, In>::convert(
+      YCbCr_to_RGB_Converter<In, In>::convert(ycbcr));
+  }
+};
+
 template <typename Converter, typename Out, typename In>
 __global__ void ColorSpaceConvKernel(Out *output, const In *input, int64_t sz) {
   int64_t idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -170,6 +209,10 @@ void RunColorSpaceConversionKernel(Out *output, const In *input, DALIImageType o
   const ImageTypePair kGRAY_TO_RGB{DALI_GRAY, DALI_RGB};
   const ImageTypePair kGRAY_TO_BGR{DALI_GRAY, DALI_BGR};
   const ImageTypePair kGRAY_TO_YCbCr{DALI_GRAY, DALI_YCbCr};
+  const ImageTypePair kRGB_TO_LAB{DALI_RGB, DALI_Lab};
+  const ImageTypePair kBGR_TO_LAB{DALI_BGR, DALI_Lab};
+  const ImageTypePair kGRAY_TO_LAB{DALI_GRAY, DALI_Lab};
+  const ImageTypePair kYCbCr_TO_LAB{DALI_YCbCr, DALI_Lab};
 
   if (conversion == kRGB_TO_BGR || conversion == kBGR_TO_RGB) {
     ColorSpaceConvKernel<RGB_to_BGR_Converter<Out, In>, Out, In>
@@ -200,6 +243,18 @@ void RunColorSpaceConversionKernel(Out *output, const In *input, DALIImageType o
         <<<grid, block, 0, stream>>>(output, input, npixels);
   } else if (conversion == kYCbCr_TO_GRAY) {
     ColorSpaceConvKernel<YCbCr_to_Gray_Converter<Out, In>, Out, In>
+        <<<grid, block, 0, stream>>>(output, input, npixels);
+  } else if (conversion == kRGB_TO_LAB) {
+    ColorSpaceConvKernel<RGB_to_Lab_Converter<Out, In>, Out, In>
+        <<<grid, block, 0, stream>>>(output, input, npixels);
+  } else if (conversion == kBGR_TO_LAB) {
+    ColorSpaceConvKernel<BGR_to_Lab_Converter<Out, In>, Out, In>
+        <<<grid, block, 0, stream>>>(output, input, npixels);
+  } else if (conversion == kGRAY_TO_LAB) {
+    ColorSpaceConvKernel<Gray_to_Lab_Converter<Out, In>, Out, In>
+        <<<grid, block, 0, stream>>>(output, input, npixels);
+  } else if (conversion == kYCbCr_TO_LAB) {
+    ColorSpaceConvKernel<YCbCr_to_Lab_Converter<Out, In>, Out, In>
         <<<grid, block, 0, stream>>>(output, input, npixels);
   } else {
     DALI_FAIL(make_string("conversion not supported ", in_type, " to ", out_type));

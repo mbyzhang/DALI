@@ -51,9 +51,11 @@ static cv::ColorConversionCodes GetOpenCvColorConversionCode(
     static const ColorConversionMap color_conversion_map = {
         { {DALI_RGB, DALI_BGR},  cv::COLOR_RGB2BGR },
         { {DALI_RGB, DALI_GRAY}, cv::COLOR_RGB2GRAY },
+        { {DALI_RGB, DALI_Lab},  cv::COLOR_RGB2Lab },
 
         { {DALI_BGR, DALI_RGB},  cv::COLOR_BGR2RGB },
         { {DALI_BGR, DALI_GRAY}, cv::COLOR_BGR2GRAY },
+        { {DALI_BGR, DALI_Lab},  cv::COLOR_BGR2Lab },
 
         { {DALI_GRAY, DALI_RGB}, cv::COLOR_GRAY2RGB },
         { {DALI_GRAY, DALI_BGR}, cv::COLOR_GRAY2BGR },

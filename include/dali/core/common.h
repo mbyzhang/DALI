@@ -105,15 +105,16 @@ enum DALIInterpType {
  * @brief Supported image formats
  */
 enum DALIImageType {
+  DALI_ANY_DATA     = -1,
   DALI_RGB          = 0,
   DALI_BGR          = 1,
   DALI_GRAY         = 2,
   DALI_YCbCr        = 3,
-  DALI_ANY_DATA     = 4
+  DALI_Lab          = 4,
 };
 
 inline bool IsColor(DALIImageType type) {
-  return type == DALI_RGB || type == DALI_BGR || type == DALI_YCbCr;
+  return type == DALI_RGB || type == DALI_BGR || type == DALI_YCbCr || type == DALI_Lab;
 }
 
 inline int NumberOfChannels(DALIImageType type, int orig_nchannels = -1) {
@@ -123,6 +124,7 @@ inline int NumberOfChannels(DALIImageType type, int orig_nchannels = -1) {
     case DALI_RGB:
     case DALI_BGR:
     case DALI_YCbCr:
+    case DALI_Lab:
       return 3;
     case DALI_ANY_DATA:
     default:
@@ -183,6 +185,8 @@ inline std::string to_string(const DALIImageType& im_type) {
       return "GRAY";
     case DALI_YCbCr:
       return "YCbCr";
+    case DALI_Lab:
+      return "Lab";
     default:
       return "<unknown>";
   }

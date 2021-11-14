@@ -79,7 +79,7 @@ GenericImage::DecodeImpl(DALIImageType image_type,
     // Special case for ANY_DATA and 4 channels -> Convert to RGBA
     // Note: ANY_DATA with 1 or 3 channels is already forced to DALI_GRAY and DALI_RGB respectively.
     cv::cvtColor(decoded_image, decoded_image, cv::COLOR_BGRA2RGBA);
-  } else if (image_type == DALI_RGB || image_type == DALI_YCbCr) {
+  } else if (image_type == DALI_RGB || image_type == DALI_YCbCr || image_type == DALI_Lab) {
     // if different image type needed (e.g. RGB), permute from BGR
     OpenCvColorConversion(DALI_BGR, decoded_image, image_type, decoded_image);
   }

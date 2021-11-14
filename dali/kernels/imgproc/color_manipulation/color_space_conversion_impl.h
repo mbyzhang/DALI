@@ -39,6 +39,34 @@ DALI_HOST_DEV DALI_FORCEINLINE vec<N, float> norm(vec<N, float> x) {
   return x;
 }
 
+DALI_HOST_DEV DALI_FORCEINLINE float lab_f(float t) {
+  if (t > 0.008856f) {
+#ifdef __CUDA_ARCH__
+    return powf(t, 1.0f / 3.0f);
+#else
+    return std::pow(t, 1.0f / 3.0f);
+#endif
+  } else {
+    return 7.787f * t + 16.0f / 116.0f;
+  }
+}
+
+DALI_HOST_DEV DALI_FORCEINLINE float srgb_to_linear(float t) {
+  if (t > 0.04045f) {
+#ifdef __CUDA_ARCH__
+    return powf((t + 0.055f) / 1.055f, 2.4f);
+#else
+    return std::pow((t + 0.055f) / 1.055f, 2.4f);
+#endif
+  } else {
+    return t / 12.92f;
+  }
+}
+
+DALI_HOST_DEV DALI_FORCEINLINE vec3 srgb_to_linear(vec3 t) {
+  return { srgb_to_linear(t.x), srgb_to_linear(t.y), srgb_to_linear(t.z) };
+}
+
 }  // namespace detail
 
 // Y, Cb, Cr definition from ITU-R BT.601, with values in the range 16-235, allowing for
@@ -208,6 +236,30 @@ DALI_HOST_DEV DALI_FORCEINLINE vec<3, uint8_t> ycbcr_to_rgb(vec<3, uint8_t> ycbc
 template <typename Output, typename Input>
 DALI_HOST_DEV DALI_FORCEINLINE Output rgb_to_gray(vec<3, Input> rgb) {
   return jpeg::rgb_to_y<Output>(rgb);
+}
+
+template <typename Output, typename Input>
+DALI_HOST_DEV DALI_FORCEINLINE vec<3, Output> rgb_to_lab(vec<3, Input> rgb_in) {
+  auto rgb = detail::srgb_to_linear(detail::norm(rgb_in));
+
+  constexpr mat3 coeffs_xyz({{
+    {0.412453f, 0.357580f, 0.180423f},
+    {0.212671f, 0.715160f, 0.072169f},
+    {0.019334f, 0.119193f, 0.950227f}
+  }});
+
+  vec3 xyz = coeffs_xyz * rgb;
+
+  xyz.x /= 0.950456f;
+  xyz.z /= 1.088754f;
+
+  auto l = ConvertSatNorm<Output>(1.16f * detail::lab_f(xyz.y) - 0.16f);
+  auto a = ConvertSatNorm<Output>(
+    (500.0f * (detail::lab_f(xyz.x) - detail::lab_f(xyz.y)) + 128.0f) / 255.0f);
+  auto b = ConvertSatNorm<Output>(
+    (200.0f * (detail::lab_f(xyz.y) - detail::lab_f(xyz.z)) + 128.0f) / 255.0f);
+
+  return {l, a, b};
 }
 
 }  // namespace color
